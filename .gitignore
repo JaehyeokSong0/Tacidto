@@ -70,3 +70,17 @@ crashlytics-build.properties
 # Temporary auto-generated Android Assets
 /[Aa]ssets/[Ss]treamingAssets/aa.meta
 /[Aa]ssets/[Ss]treamingAssets/aa/*
+
+# === Custom ignore configuration ===
+
+# Environment such as API key, Token...
+/[Aa]ssets/[Ee]nvironment/
+
+# External packages, plugins, ...
+/[Aa]ssets/[Pp]lugins/
+
+# Addressable build data
+/[Cc]CDBuildData/
+
+# Paid assets
+/[Aa]ssets/[Ss]ynty/
