@@ -13,30 +13,39 @@ namespace JaehyeokSong0.Tacidto.Application.Version
 {
     /// <summary>
     /// 게임의 버전을 확인하고 Addressable을 통해 리소스를 최신 상태로 관리합니다.
+    /// ApplicationScope에서 Singleton으로 관리됩니다.
     /// </summary>
     public class VersionController
     {
         public IReadOnlyReactiveProperty<float> Progress => _progress;
         private ReactiveProperty<float> _progress = new ReactiveProperty<float>();
 
-        public async UniTask StartUpdate()
+        public async UniTask<bool> StartUpdate()
         {
             try
             {
+                _progress.Value = 0f;
+
                 Configure();
 
                 var catalog = await CheckCatalogUpdates();
 
+                // 업데이트할 catalog가 있다면
                 if (catalog != null && catalog.Count > 0)
                 {
                     var updatedCatalog = await UpdateCatalog(catalog);
-
                     await DownloadDependencies(updatedCatalog);
                 }
+
+                _progress.Value = 1f;
+
+                return true;
             }
             catch (Exception ex)
             {
                 DebugUtility.LogError($"Exception in VersionController : {ex}");
+
+                return false;
             }
         }
 
@@ -51,47 +60,69 @@ namespace JaehyeokSong0.Tacidto.Application.Version
         private async UniTask<List<string>> CheckCatalogUpdates()
         {
             var updateHandle = Addressables.CheckForCatalogUpdates(false);
-            await updateHandle.ToUniTask();
 
-            if (updateHandle.Status == AsyncOperationStatus.Succeeded)
+            try
             {
-                return updateHandle.Result;
+                await updateHandle.ToUniTask();
+
+                if (updateHandle.Status == AsyncOperationStatus.Succeeded)
+                {
+                    return updateHandle.Result;
+                }
+                else
+                {
+                    throw new Exception($"Failed to check updates for catalog: {updateHandle.OperationException?.Message}");
+                }
             }
-            else
+            finally
             {
-                throw new Exception("Failed to check updates for catalog");
+                Addressables.Release(updateHandle);
             }
         }
 
         private async UniTask<List<IResourceLocator>> UpdateCatalog(List<string> catalog)
         {
             var updateHandle = Addressables.UpdateCatalogs(catalog);
-            await updateHandle.ToUniTask();
 
-            if (updateHandle.Status == AsyncOperationStatus.Succeeded)
+            try
             {
-                return updateHandle.Result;
+                await updateHandle.ToUniTask();
+                if (updateHandle.Status == AsyncOperationStatus.Succeeded)
+                {
+                    return updateHandle.Result;
+                }
+                else
+                {
+                    throw new Exception($"Failed to update catalog: {updateHandle.OperationException?.Message}");
+                }
             }
-            else
+            finally
             {
-                throw new Exception("Failed to update catalog");
+                Addressables.Release(updateHandle);
             }
         }
 
         private async UniTask DownloadDependencies(List<IResourceLocator> catalog)
         {
             var downloadHandle = Addressables.DownloadDependenciesAsync(catalog);
-            await downloadHandle.ToUniTask();
 
-            while (_progress.Value < 1f)
+            try
             {
-                _progress.Value = downloadHandle.PercentComplete;
-                await UniTask.Yield();
+                while (downloadHandle.IsDone == false)
+                {
+                    _progress.Value = downloadHandle.PercentComplete;
+                    await UniTask.Yield();
+                }
+
+                if (downloadHandle.Status != AsyncOperationStatus.Succeeded)
+                {
+                    throw new Exception($"Failed to download dependencies: {downloadHandle.OperationException?.Message}");
+                }
+                _progress.Value = 1f;
             }
-
-            if (downloadHandle.Status != AsyncOperationStatus.Succeeded)
+            finally
             {
-                throw new Exception("Failed to download dependencies");
+                Addressables.Release(downloadHandle);
             }
         }
     }

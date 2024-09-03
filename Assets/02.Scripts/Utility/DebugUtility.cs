@@ -5,7 +5,16 @@ namespace JaehyeokSong0.Tacidto.Utility
 {
     public static class DebugUtility
     {
-        public static void Log(string msg, Color color = default)
+        public enum LogColor
+        {
+            white = default,
+            red, 
+            green, 
+            blue, 
+            yellow
+        }
+
+        public static void Log(string msg, LogColor color = default)
         {
 #if UNITY_EDITOR
             if (color.Equals(default) == true)
@@ -21,7 +30,7 @@ namespace JaehyeokSong0.Tacidto.Utility
 #endif
         }
 
-        public static void LogError(string msg, Color color = default)
+        public static void LogError(string msg, LogColor color = default)
         {
 #if UNITY_EDITOR
             if (color.Equals(default) == true)

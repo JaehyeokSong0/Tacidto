@@ -11,6 +11,7 @@ namespace JaehyeokSong0.Tacidto.Application.Scope
     /// </summary>
     public class ApplicationScope : LifetimeScope
     {
+        [Header("Prefabs to inject")]
         [SerializeField] private ServerConnector _serverConnector;
 
         protected override void Awake()

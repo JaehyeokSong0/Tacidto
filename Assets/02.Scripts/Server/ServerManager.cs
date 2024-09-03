@@ -15,7 +15,7 @@ namespace JaehyeokSong0.Tacidto.Server
         private const int TARGET_FRAME_RATE = 60;
         private readonly string IP_V4_ADDRESS = "0.0.0.0";
 
-        private ushort _port = 7777;
+        private ushort _port = 2024;
         private bool _isServerRunning = false;
 
         private NetworkManager _networkManager;
@@ -97,7 +97,7 @@ namespace JaehyeokSong0.Tacidto.Server
             UnityEngine.Application.targetFrameRate = TARGET_FRAME_RATE;
             _transport.SetConnectionData(IP_V4_ADDRESS, _port);
 
-            SetUpCallback();
+            SetCallback();
 
             if (_networkManager.StartServer() == true)
             {
@@ -110,13 +110,22 @@ namespace JaehyeokSong0.Tacidto.Server
             }
         }
 
-        private void SetUpCallback()
+        private void SetCallback()
         {
-            _networkManager.OnClientConnectedCallback +=
-                (clientID) => DebugUtility.Log($"Client Connected / ID : {clientID}");
-
-            _networkManager.OnClientDisconnectCallback +=
-                (clientID) => DebugUtility.Log($"Client Disconnected / ID : {clientID}");
+            _networkManager.OnClientConnectedCallback += OnClientConnected;
+            _networkManager.OnClientDisconnectCallback += OnClientDisconnected;
         }
+
+
+        #region Callbacks
+        private void OnClientConnected(ulong clientID)
+        {
+            DebugUtility.Log($"Client Connected / ID : {clientID}");
+        }
+        private void OnClientDisconnected(ulong clientID)
+        {
+            DebugUtility.Log($"Client Disconnected / ID : {clientID}");
+        }
+        #endregion
     }
 }
