@@ -4,7 +4,6 @@ using JaehyeokSong0.Tacidto.Utility;
 using System;
 using System.Collections.Generic;
 using UniRx;
-using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.AddressableAssets.ResourceLocators;
 using UnityEngine.ResourceManagement.AsyncOperations;
@@ -15,16 +14,30 @@ namespace JaehyeokSong0.Tacidto.Application.Version
     /// 게임의 버전을 확인하고 Addressable을 통해 리소스를 최신 상태로 관리합니다.
     /// ApplicationScope에서 Singleton으로 관리됩니다.
     /// </summary>
-    public class VersionController
+    public class ResourceVersionController
     {
+        public enum VersionStatus
+        {
+            None,
+            DownloadingResources,
+            DownloadingCompleted,
+            DownloadingFailed
+        }
+
         public IReadOnlyReactiveProperty<float> Progress => _progress;
+        public IReadOnlyReactiveProperty<VersionStatus> Status => _status;
+
+
         private ReactiveProperty<float> _progress = new ReactiveProperty<float>();
+        private ReactiveProperty<VersionStatus> _status = new ReactiveProperty<VersionStatus>(VersionStatus.None);
+
 
         public async UniTask<bool> StartUpdate()
         {
             try
             {
                 _progress.Value = 0f;
+                _status.Value = VersionStatus.DownloadingResources;
 
                 Configure();
 
@@ -34,16 +47,21 @@ namespace JaehyeokSong0.Tacidto.Application.Version
                 if (catalog != null && catalog.Count > 0)
                 {
                     var updatedCatalog = await UpdateCatalog(catalog);
-                    await DownloadDependencies(updatedCatalog);
+
+                    if (updatedCatalog != null)
+                    {
+                        await DownloadDependencies(updatedCatalog);
+                    }
                 }
 
                 _progress.Value = 1f;
+                _status.Value = VersionStatus.DownloadingCompleted;
 
                 return true;
             }
             catch (Exception ex)
             {
-                DebugUtility.LogError($"Exception in VersionController : {ex}");
+                DebugUtils.LogError($"Exception in VersionController/StartUpdate : {ex}");
 
                 return false;
             }
@@ -57,26 +75,39 @@ namespace JaehyeokSong0.Tacidto.Application.Version
             };
         }
 
+        /// <summary>
+        /// 새로운 업데이트가 있는지 확인
+        /// </summary>
+        /// <returns>업데이트가 가능한 catalog ID의 list</returns>
         private async UniTask<List<string>> CheckCatalogUpdates()
         {
-            var updateHandle = Addressables.CheckForCatalogUpdates(false);
+            var updateHandle = Addressables.CheckForCatalogUpdates();
 
             try
             {
                 await updateHandle.ToUniTask();
+                await UniTask.WaitUntil(() => updateHandle.IsDone);
 
-                if (updateHandle.Status == AsyncOperationStatus.Succeeded)
+                switch (updateHandle.Status)
                 {
-                    return updateHandle.Result;
-                }
-                else
-                {
-                    throw new Exception($"Failed to check updates for catalog: {updateHandle.OperationException?.Message}");
+                    case AsyncOperationStatus.Succeeded:
+                        {
+                            return updateHandle.Result;
+                        }
+                    default:
+                        {
+                            _status.Value = VersionStatus.DownloadingFailed;
+
+                            throw new Exception($"Failed to check updates for catalog: {updateHandle.OperationException?.Message}");
+                        }
                 }
             }
             finally
             {
-                Addressables.Release(updateHandle);
+                if (updateHandle.IsValid() == true)
+                {
+                    ReleaseHandle(updateHandle);
+                }
             }
         }
 
@@ -87,6 +118,8 @@ namespace JaehyeokSong0.Tacidto.Application.Version
             try
             {
                 await updateHandle.ToUniTask();
+                await UniTask.WaitUntil(() => updateHandle.IsDone);
+
                 if (updateHandle.Status == AsyncOperationStatus.Succeeded)
                 {
                     return updateHandle.Result;
@@ -98,7 +131,10 @@ namespace JaehyeokSong0.Tacidto.Application.Version
             }
             finally
             {
-                Addressables.Release(updateHandle);
+                if (updateHandle.IsValid() == true)
+                {
+                    ReleaseHandle(updateHandle);
+                }
             }
         }
 
@@ -108,21 +144,39 @@ namespace JaehyeokSong0.Tacidto.Application.Version
 
             try
             {
-                while (downloadHandle.IsDone == false)
+                while (downloadHandle.Status == AsyncOperationStatus.None)
                 {
                     _progress.Value = downloadHandle.PercentComplete;
                     await UniTask.Yield();
                 }
 
-                if (downloadHandle.Status != AsyncOperationStatus.Succeeded)
+                if (downloadHandle.Status == AsyncOperationStatus.Failed)
                 {
+                    _status.Value = VersionStatus.DownloadingFailed;
                     throw new Exception($"Failed to download dependencies: {downloadHandle.OperationException?.Message}");
                 }
+
+                _status.Value = VersionStatus.DownloadingCompleted;
                 _progress.Value = 1f;
             }
             finally
             {
-                Addressables.Release(downloadHandle);
+                ReleaseHandle(downloadHandle);
+            }
+        }
+
+        private void ReleaseHandle(AsyncOperationHandle handle)
+        {
+            if (handle.IsValid() == true)
+            {
+                try
+                {
+                    Addressables.Release(handle);
+                }
+                catch (Exception ex)
+                {
+                    DebugUtils.LogError($"Error releasing handle: {ex}");
+                }
             }
         }
     }

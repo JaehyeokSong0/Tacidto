@@ -1,7 +1,6 @@
 namespace JaehyeokSong0.Tacidto.Application.Version
 {
-    public interface IVersionView
+    public interface IVersionView : IBindable
     {
-        void UpdateProgressUI(float progress);
     }
 }

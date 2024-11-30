@@ -1,23 +1,22 @@
-using System;
 using UnityEngine;
 
 namespace JaehyeokSong0.Tacidto.Utility
 {
-    public static class DebugUtility
+    public static class DebugUtils
     {
         public enum LogColor
         {
-            white = default,
-            red, 
-            green, 
-            blue, 
+            white,
+            red,
+            green,
+            blue,
             yellow
         }
 
-        public static void Log(string msg, LogColor color = default)
+        public static void Log(string msg, LogColor color = LogColor.white)
         {
 #if UNITY_EDITOR
-            if (color.Equals(default) == true)
+            if (color.Equals(LogColor.white) == true)
             {
                 Debug.Log(msg);
             }
@@ -30,17 +29,10 @@ namespace JaehyeokSong0.Tacidto.Utility
 #endif
         }
 
-        public static void LogError(string msg, LogColor color = default)
+        public static void LogError(string msg, LogColor color = LogColor.red)
         {
 #if UNITY_EDITOR
-            if (color.Equals(default) == true)
-            {
-                Debug.LogError($"<color=red>{msg}</color>");
-            }
-            else
-            {
-                Debug.LogError($"<color={color}>{msg}</color>");
-            }
+            Debug.LogError($"<color={color}>{msg}</color>");
 #elif UNITY_SERVER
                 Console.ForegroundColor = ConsoleColor.Red;
                 Console.WriteLine($"[{System.DateTime.Now}] : {msg}");

@@ -25,7 +25,7 @@ namespace JaehyeokSong0.Tacidto.Application.Scope
         {
             base.Configure(builder);
 
-            builder.Register<VersionController>(Lifetime.Singleton);
+            builder.Register<ResourceVersionController>(Lifetime.Singleton);
             builder.RegisterComponentInNewPrefab(_serverConnector, Lifetime.Singleton);
         }
     }

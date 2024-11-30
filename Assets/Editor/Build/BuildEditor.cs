@@ -18,7 +18,7 @@ public class BuildEditor
 
         foreach (BuildConfig config in configs)
         {
-            DebugUtility.Log(config.name);
+            DebugUtils.Log(config.name);
         }
 
         foreach (BuildConfig config in configs)
@@ -28,12 +28,12 @@ public class BuildEditor
                 continue;
             }
 
-            DebugUtility.Log($"Found BuildConfig [{config.name}]");
+            DebugUtils.Log($"Found BuildConfig [{config.name}]");
 
             if ((config.buildTarget == BuildTarget.StandaloneWindows) ||
                ((config.buildTarget == BuildTarget.StandaloneWindows64)))
             {
-                DebugUtility.Log($"Try Build [{config.name}]...");
+                DebugUtils.Log($"Try Build [{config.name}]...");
                 Build(config);
             }
         }
@@ -43,15 +43,15 @@ public class BuildEditor
     {
         if (config == null)
         {
-            DebugUtility.Log($"BuildConfig can not be null");
+            DebugUtils.Log($"BuildConfig can not be null");
             return;
         }
         if (config.scenes.Count == 0)
         {
-            DebugUtility.LogError($"No scenes found in {config.name}");
+            DebugUtils.LogError($"No scenes found in {config.name}");
             return;
         }
-        DebugUtility.Log($"Start building with configuration [{config}]... ");
+        DebugUtils.Log($"Start building with configuration [{config}]... ");
         SetBuildSettings(config);
 
         string[] scenePaths = config.scenes
@@ -66,10 +66,10 @@ public class BuildEditor
             target = config.buildTarget,
         };
 
-        DebugUtility.Log($"Starting build for {config.name}...");
-        DebugUtility.Log($"Build target : {config.buildTarget}");
-        DebugUtility.Log($"Output path : {buildPath}");
-        DebugUtility.Log($"Scene count : {config.scenes.Count}");
+        DebugUtils.Log($"Starting build for {config.name}...");
+        DebugUtils.Log($"Build target : {config.buildTarget}");
+        DebugUtils.Log($"Output path : {buildPath}");
+        DebugUtils.Log($"Scene count : {config.scenes.Count}");
 
         BuildPipeline.BuildPlayer(options);
     }
@@ -121,10 +121,10 @@ public class BuildEditor
                 case BuildTarget.StandaloneWindows:
                 case BuildTarget.StandaloneWindows64:
                     EditorUserBuildSettings.standaloneBuildSubtarget = StandaloneBuildSubtarget.Server;
-                    DebugUtility.Log($"Setting build subtarget to Server for {config.buildTarget}");
+                    DebugUtils.Log($"Setting build subtarget to Server for {config.buildTarget}");
                     break;
                 default:
-                    DebugUtility.LogError($"Server build is not supported for {config.buildTarget}. Building as regular player.");
+                    DebugUtils.LogError($"Server build is not supported for {config.buildTarget}. Building as regular player.");
                     EditorUserBuildSettings.standaloneBuildSubtarget = StandaloneBuildSubtarget.Player;
                     break;
             }
@@ -132,7 +132,7 @@ public class BuildEditor
         else
         {
             EditorUserBuildSettings.standaloneBuildSubtarget = StandaloneBuildSubtarget.Player;
-            DebugUtility.Log($"Setting build subtarget to Player for {config.buildTarget}");
+            DebugUtils.Log($"Setting build subtarget to Player for {config.buildTarget}");
         }
     }
 }

@@ -102,11 +102,11 @@ namespace JaehyeokSong0.Tacidto.Server
             if (_networkManager.StartServer() == true)
             {
                 _isServerRunning = true;
-                DebugUtility.Log($"SetUpServer Success : {IP_V4_ADDRESS}:{_port}");
+                DebugUtils.Log($"SetUpServer Success : {IP_V4_ADDRESS}:{_port}");
             }
             else
             {
-                DebugUtility.Log($"SetUpServer Failed : {IP_V4_ADDRESS}:{_port}");
+                DebugUtils.Log($"SetUpServer Failed : {IP_V4_ADDRESS}:{_port}");
             }
         }
 
@@ -120,11 +120,11 @@ namespace JaehyeokSong0.Tacidto.Server
         #region Callbacks
         private void OnClientConnected(ulong clientID)
         {
-            DebugUtility.Log($"Client Connected / ID : {clientID}");
+            DebugUtils.Log($"Client Connected / ID : {clientID}");
         }
         private void OnClientDisconnected(ulong clientID)
         {
-            DebugUtility.Log($"Client Disconnected / ID : {clientID}");
+            DebugUtils.Log($"Client Disconnected / ID : {clientID}");
         }
         #endregion
     }
