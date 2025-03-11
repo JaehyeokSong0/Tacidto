@@ -1,5 +1,6 @@
 using Cysharp.Threading.Tasks;
 using System;
+using VContainer.Unity;
 
 namespace JaehyeokSong0.Tacidto.Utility
 {
@@ -9,12 +10,12 @@ namespace JaehyeokSong0.Tacidto.Utility
         {
             LoadingScene,
             TitleScene,
-
+            LobbyScene,
             // 서버 전용 씬
             ServerScene,
         }
 
-        public static async UniTask LoadScene(SceneIndex sceneIndex)
+        public static async UniTask LoadSceneAsync(SceneIndex sceneIndex)
         {
             string sceneName = sceneIndex.ToString();
 
@@ -32,7 +33,7 @@ namespace JaehyeokSong0.Tacidto.Utility
             }
         }
 
-        public static async UniTask DelayForSeconds(float second)
+        public static async UniTask DelayForSecondsAsync(float second)
         {
             await UniTask.SwitchToMainThread();
             await UniTask.Delay(TimeSpan.FromSeconds(second));

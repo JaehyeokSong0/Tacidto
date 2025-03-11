@@ -3,6 +3,7 @@ using JaehyeokSong0.Tacidto.Application.Version;
 using JaehyeokSong0.Tacidto.Network;
 using JaehyeokSong0.Tacidto.Utility;
 using System;
+using System.Threading;
 using UniRx;
 using VContainer;
 using VContainer.Unity;
@@ -13,7 +14,7 @@ namespace JaehyeokSong0.Tacidto.Application.Scene
     /// Loading scene의 flow를 관리합니다.
     /// LoadingSceneScope에서 Scoped으로 관리됩니다.
     /// </summary>
-    public class LoadingSceneManager : SceneManagerBase
+    public class LoadingSceneManager : SceneManagerBase, IAsyncStartable
     {
         public enum LoadingPhase
         {
@@ -24,76 +25,90 @@ namespace JaehyeokSong0.Tacidto.Application.Scene
             Failed
         }
 
-        public IReadOnlyReactiveProperty<LoadingPhase> CurrentPhase => _currentPhase;
-        public ResourceVersionController Version => _versionController;
 
-
-        [Inject] private LifetimeScope _scope;
-        [Inject] private ResourceVersionController _versionController;
-        [Inject] private ServerConnector _serverConnector;
-
+        private ResourceVersionController _versionController;
+        private ServerConnector _serverConnector;
         private IVersionView _loadingUI;
-        private ReactiveProperty<LoadingPhase> _currentPhase = new ReactiveProperty<LoadingPhase>(LoadingPhase.None);
+        private ReactiveProperty<LoadingPhase> _currentPhase;
 
 
-        private async void Start()
+        [Inject]
+        public LoadingSceneManager
+            (
+                ResourceVersionController versionController,
+                ServerConnector serverConnector,
+                IVersionView loadingUI,
+                ReactiveProperty<LoadingPhase> loadingPhase
+            )
         {
-            _loadingUI = _scope.Container.Resolve<IVersionView>();
-            _loadingUI.Bind();
-
-            await ProcessLoading();
-
-            await SceneUtils.DelayForSeconds(0.5f);
-            _loadingUI.Unbind();
+            _versionController = versionController;
+            _serverConnector = serverConnector;
+            _loadingUI = loadingUI;
+            _currentPhase = loadingPhase;
         }
 
-        private async UniTask ProcessLoading()
+
+        #region Event Functions
+        public async UniTask StartAsync(CancellationToken cancellation = default)
+        {
+            DebugUtils.Log($"StartAsync Called : {this.GetHashCode()}");
+            _loadingUI.Bind();
+
+            await ProcessLoadingAsync();
+
+            await SceneUtils.DelayForSecondsAsync(0.5f);
+            _loadingUI.Unbind();
+        }
+        #endregion
+
+
+        private async UniTask ProcessLoadingAsync()
         {
             try
             {
                 _currentPhase.Value = LoadingPhase.ResourceUpdate;
-                bool versionControl = await _versionController.StartUpdate();
+                bool versionControl = await _versionController.StartUpdateAsync();
 
                 if (versionControl == false)
                 {
-                    await HandleFailure("Version update failed.");
+                    await HandleFailureAsync("Version update failed.");
 
                     return;
                 }
 
-                await SceneUtils.DelayForSeconds(0.5f);
+                await SceneUtils.DelayForSecondsAsync(0.5f);
 
                 _currentPhase.Value = LoadingPhase.ServerConnection;
-                bool serverConnection = await _serverConnector.ConnectToServer();
+                bool serverConnection = await _serverConnector.ConnectToServerAsync();
                 await UniTask.SwitchToMainThread();
 
                 if (serverConnection == false)
                 {
-                    await HandleFailure("Connecting to server failed.");
+                    await HandleFailureAsync("Connecting to server failed.");
 
                     return;
                 }
 
                 _currentPhase.Value = LoadingPhase.Completed;
 
-                await SceneUtils.DelayForSeconds(0.5f);
-                await SceneUtils.LoadScene(SceneUtils.SceneIndex.TitleScene);
+                await SceneUtils.DelayForSecondsAsync(0.5f);
+                await SceneUtils.LoadSceneAsync(SceneUtils.SceneIndex.TitleScene);
             }
             catch (Exception ex)
             {
-                await HandleFailure($"Unexpected error occured : {ex.Message}");
+                await HandleFailureAsync($"Unexpected error occured : {ex.Message}");
             }
         }
 
-        private async UniTask HandleFailure(string errorMessage, float delaySeconds = 0.5f)
+        private async UniTask HandleFailureAsync(string errorMessage, float delaySeconds = 0.5f)
         {
             // 메인 스레드로 전환
             await UniTask.SwitchToMainThread();
-            
+
             DebugUtils.LogError(errorMessage);
             _currentPhase.Value = LoadingPhase.Failed;
 
-            await SceneUtils.DelayForSeconds(delaySeconds);
+            await SceneUtils.DelayForSecondsAsync(delaySeconds);
         }
     }
 }

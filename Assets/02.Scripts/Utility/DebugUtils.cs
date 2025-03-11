@@ -1,4 +1,9 @@
+using System.Runtime.CompilerServices;
+#if UNITY_EDITOR
 using UnityEngine;
+#elif UNITY_SERVER
+using System;
+#endif
 
 namespace JaehyeokSong0.Tacidto.Utility
 {
@@ -29,14 +34,14 @@ namespace JaehyeokSong0.Tacidto.Utility
 #endif
         }
 
-        public static void LogError(string msg, LogColor color = LogColor.red)
+        public static void LogError(string msg, LogColor color = LogColor.red, [CallerMemberName] string callerMemberName = "")
         {
 #if UNITY_EDITOR
             Debug.LogError($"<color={color}>{msg}</color>");
 #elif UNITY_SERVER
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"[{System.DateTime.Now}] : {msg}");
-                Console.ResetColor();
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine($"[{System.DateTime.Now}] [{callerMemberName}] : {msg}");
+            Console.ResetColor();
 #endif
         }
     }

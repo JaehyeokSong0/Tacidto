@@ -45,7 +45,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   parentReference:
-    TypeName: JaehyeokSong0.Tacidto.Application.Scope.MainScope
+    TypeName: JaehyeokSong0.Tacidto.Application.Scope.ApplicationScope
   autoRun: 1
-  autoInjectGameObjects:
-  - {fileID: 4025116716762927785, guid: e14564a69cbea914e96aa573e9934323, type: 3}
+  autoInjectGameObjects: []
+  _sceneManager: {fileID: 0}
+  _titleUI: {fileID: 0}

@@ -29,7 +29,7 @@ namespace JaehyeokSong0.Tacidto.Network
 
         private const string SERVER_IP = "127.0.0.1"; // localhost
         private const ushort SERVER_PORT = 2024;
-        private const float TIME_OUT = 10f;
+        private const float TIME_OUT = 30f;
 
         private NetworkManager _networkManager;
         private UnityTransport _transport;
@@ -38,14 +38,25 @@ namespace JaehyeokSong0.Tacidto.Network
 
         private ReactiveProperty<ServerConnectionStatus> _status = new ReactiveProperty<ServerConnectionStatus>(ServerConnectionStatus.None);
 
+
+        #region Event Functions
         private void Awake()
         {
             _networkManager = GetComponent<NetworkManager>();
             _transport = GetComponent<UnityTransport>();
         }
+        #endregion
 
-        public async UniTask<bool> ConnectToServer()
+
+        public async UniTask<bool> ConnectToServerAsync()
         {
+            if (_status.Value == ServerConnectionStatus.Connected)
+            {
+                DebugUtils.Log("Already connected to server", DebugUtils.LogColor.yellow);
+                return false;
+            }
+
+            DebugUtils.Log($"Attempting to connect to {SERVER_IP}:{SERVER_PORT}");
             _status.Value = ServerConnectionStatus.Connecting;
 
             // 아직 진행중인 task가 존재할 때
@@ -59,19 +70,23 @@ namespace JaehyeokSong0.Tacidto.Network
             }
 
             _connectionCompletion = new UniTaskCompletionSource<bool>();
+
             _transport.SetConnectionData(SERVER_IP, SERVER_PORT);
-            SetCallback();
+
+            SetupCallbacks();
+
+            DebugUtils.Log($"Transport: Address={_transport.ConnectionData.Address}, Port={_transport.ConnectionData.Port}");
 
             if (_networkManager.StartClient() == false)
             {
-                DebugUtils.LogError("StartClient Failed");
+                DebugUtils.LogError($"StartClient Failed - NetworkManager State: {_networkManager.NetworkConfig}");
                 _status.Value = ServerConnectionStatus.Error;
                 ResetCallback();
 
                 return false;
             }
 
-            DebugUtils.Log("StartClient Success");
+            DebugUtils.Log("StartClient Success - Waiting for connection...");
 
             try
             {
@@ -113,7 +128,7 @@ namespace JaehyeokSong0.Tacidto.Network
         }
 
         #region Callbacks
-        private void SetCallback()
+        private void SetupCallbacks()
         {
             _networkManager.OnClientConnectedCallback += OnClientConnected;
             _networkManager.OnClientDisconnectCallback += OnClientDisconnected;

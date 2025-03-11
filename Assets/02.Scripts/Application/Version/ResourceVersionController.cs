@@ -7,6 +7,7 @@ using UniRx;
 using UnityEngine.AddressableAssets;
 using UnityEngine.AddressableAssets.ResourceLocators;
 using UnityEngine.ResourceManagement.AsyncOperations;
+using static UnityEngine.Rendering.VirtualTexturing.Debugging;
 
 namespace JaehyeokSong0.Tacidto.Application.Version
 {
@@ -32,7 +33,7 @@ namespace JaehyeokSong0.Tacidto.Application.Version
         private ReactiveProperty<VersionStatus> _status = new ReactiveProperty<VersionStatus>(VersionStatus.None);
 
 
-        public async UniTask<bool> StartUpdate()
+        public async UniTask<bool> StartUpdateAsync()
         {
             try
             {
@@ -41,16 +42,16 @@ namespace JaehyeokSong0.Tacidto.Application.Version
 
                 Configure();
 
-                var catalog = await CheckCatalogUpdates();
+                var catalog = await CheckCatalogUpdatesAsync();
 
                 // 업데이트할 catalog가 있다면
                 if (catalog != null && catalog.Count > 0)
                 {
-                    var updatedCatalog = await UpdateCatalog(catalog);
+                    var updatedCatalog = await UpdateCatalogAsync(catalog);
 
                     if (updatedCatalog != null)
                     {
-                        await DownloadDependencies(updatedCatalog);
+                        await DownloadDependenciesAsync(updatedCatalog);
                     }
                 }
 
@@ -79,15 +80,15 @@ namespace JaehyeokSong0.Tacidto.Application.Version
         /// 새로운 업데이트가 있는지 확인
         /// </summary>
         /// <returns>업데이트가 가능한 catalog ID의 list</returns>
-        private async UniTask<List<string>> CheckCatalogUpdates()
+        private async UniTask<List<string>> CheckCatalogUpdatesAsync()
         {
             var updateHandle = Addressables.CheckForCatalogUpdates();
 
             try
             {
-                await updateHandle.ToUniTask();
-                await UniTask.WaitUntil(() => updateHandle.IsDone);
-
+                // [MEMO] await updateHandle.ToUniTask() 할 시 Attempting to use an invalid operation handle 에러 발생 - 원인 불명
+                await updateHandle.Task; 
+                
                 switch (updateHandle.Status)
                 {
                     case AsyncOperationStatus.Succeeded:
@@ -111,14 +112,13 @@ namespace JaehyeokSong0.Tacidto.Application.Version
             }
         }
 
-        private async UniTask<List<IResourceLocator>> UpdateCatalog(List<string> catalog)
+        private async UniTask<List<IResourceLocator>> UpdateCatalogAsync(List<string> catalog)
         {
             var updateHandle = Addressables.UpdateCatalogs(catalog);
 
             try
             {
-                await updateHandle.ToUniTask();
-                await UniTask.WaitUntil(() => updateHandle.IsDone);
+                await updateHandle.Task;
 
                 if (updateHandle.Status == AsyncOperationStatus.Succeeded)
                 {
@@ -138,13 +138,13 @@ namespace JaehyeokSong0.Tacidto.Application.Version
             }
         }
 
-        private async UniTask DownloadDependencies(List<IResourceLocator> catalog)
+        private async UniTask DownloadDependenciesAsync(List<IResourceLocator> catalog)
         {
             var downloadHandle = Addressables.DownloadDependenciesAsync(catalog);
 
             try
             {
-                while (downloadHandle.Status == AsyncOperationStatus.None)
+                while (downloadHandle.IsDone == false)
                 {
                     _progress.Value = downloadHandle.PercentComplete;
                     await UniTask.Yield();

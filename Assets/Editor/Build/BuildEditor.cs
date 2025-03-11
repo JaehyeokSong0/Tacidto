@@ -1,138 +1,183 @@
+#if UNITY_EDITOR
 using JaehyeokSong0.Tacidto.Utility;
 using System.IO;
 using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
-[InitializeOnLoad]
-public class BuildEditor
+namespace JaehyeokSong0.Editor.Build
 {
-    private const string BUILD_CONFIG_PATH = "BuildConfigs";
-    private static BuildConfig[] configs;
-
-    [MenuItem("CustomEditor/Build/Windows/Build Server and Client %t")]
-    public static void BuildAll_Windows()
+    [InitializeOnLoad]
+    public class BuildEditor
     {
-        // 메소드 내에서 지역변수로 생성하면 캐싱된 configs 리소스가 해제되는 일이 발생하므로 클래스 변수로 생성
-        configs = Resources.LoadAll<BuildConfig>(BUILD_CONFIG_PATH);
+        private const string BUILD_CONFIG_PATH = "BuildConfigs";
+        private static BuildConfig[] configs;
 
-        foreach (BuildConfig config in configs)
+
+        [MenuItem("CustomEditor/Build/Windows/Build Server and Client %t")]
+        public static void BuildAll_Windows()
         {
-            DebugUtils.Log(config.name);
+            LoadConfigs();
+            BuildForTarget(BuildTarget.StandaloneWindows64, true, true);
         }
 
-        foreach (BuildConfig config in configs)
+        [MenuItem("CustomEditor/Build/Windows/Build Server Only")]
+        public static void BuildServer_Windows()
+        {
+            LoadConfigs();
+            BuildForTarget(BuildTarget.StandaloneWindows64, false, true);
+        }
+
+        [MenuItem("CustomEditor/Build/Windows/Build Client Only")]
+        public static void BuildClient_Windows()
+        {
+            LoadConfigs();
+            BuildForTarget(BuildTarget.StandaloneWindows64, true, false);
+        }
+
+
+        private static void LoadConfigs()
+        {
+            // 메소드 내에서 지역변수로 생성하면 캐싱된 configs 리소스가 해제되는 일이 발생하므로 클래스 변수로 생성
+            configs = Resources.LoadAll<BuildConfig>(BUILD_CONFIG_PATH);
+
+            if ((configs == null) || configs.Length == 0)
+            {
+                DebugUtils.LogError("No build configs found in Resources/" + BUILD_CONFIG_PATH);
+                return;
+            }
+
+            foreach (BuildConfig config in configs)
+            {
+                DebugUtils.Log($"Found BuildConfig [{config.name}]");
+            }
+        }
+
+        private static void BuildForTarget(BuildTarget target, bool buildClient, bool buildServer)
+        {
+            if (configs == null || configs.Length == 0)
+            {
+                DebugUtils.LogError("Build configs not loaded");
+                return;
+            }
+
+            foreach (BuildConfig config in configs)
+            {
+                if(config == null)
+                {
+                    continue;
+                }
+
+                if((config.isServerBuild == true && buildServer == false)
+                    || (config.isServerBuild == false && buildClient == false))
+                {
+                    continue;
+                }
+
+                if(config.buildTarget == target)
+                {
+                    DebugUtils.Log($"Try Build [{config.name}]...");
+                    Build(config);
+                }
+            }
+        }
+
+        private static void Build(BuildConfig config)
         {
             if (config == null)
             {
-                continue;
+                DebugUtils.Log($"BuildConfig can not be null");
+                return;
+            }
+            if (config.scenes.Count == 0)
+            {
+                DebugUtils.LogError($"No scenes found in {config.name}");
+                return;
+            }
+            DebugUtils.Log($"Start building with configuration [{config}]... ");
+            SetBuildSettings(config);
+
+            string[] scenePaths = config.scenes
+                .Select(path => AssetDatabase.GetAssetPath(path))
+                .ToArray();
+            string buildPath = GetBuildPath(config) + GetExecutableExtension(config.buildTarget);
+
+            BuildPlayerOptions options = new BuildPlayerOptions
+            {
+                scenes = scenePaths,
+                locationPathName = buildPath,
+                target = config.buildTarget,
+            };
+
+            DebugUtils.Log($"Starting build for {config.name}...");
+            DebugUtils.Log($"Build target : {config.buildTarget}");
+            DebugUtils.Log($"Output path : {buildPath}");
+            DebugUtils.Log($"Scene count : {config.scenes.Count}");
+
+            BuildPipeline.BuildPlayer(options);
+        }
+
+        private static string GetBuildPath(BuildConfig config)
+        {
+            string targetFolderPath;
+
+            if (config.isServerBuild == true)
+                targetFolderPath = $"Build/Server/{config.buildTarget}";
+            else
+                targetFolderPath = $"Build/Client/{config.buildTarget}";
+
+            // Clean build (The target path already exists as a directory 오류 방지용)
+            if (Directory.Exists(targetFolderPath) == true)
+            {
+                Directory.Delete(targetFolderPath, true);
             }
 
-            DebugUtils.Log($"Found BuildConfig [{config.name}]");
+            Directory.CreateDirectory(targetFolderPath);
 
-            if ((config.buildTarget == BuildTarget.StandaloneWindows) ||
-               ((config.buildTarget == BuildTarget.StandaloneWindows64)))
+            return targetFolderPath;
+        }
+        private static string GetExecutableExtension(BuildTarget target)
+        {
+            switch (target)
             {
-                DebugUtils.Log($"Try Build [{config.name}]...");
-                Build(config);
-            }
-        }
-    }
-
-    private static void Build(BuildConfig config)
-    {
-        if (config == null)
-        {
-            DebugUtils.Log($"BuildConfig can not be null");
-            return;
-        }
-        if (config.scenes.Count == 0)
-        {
-            DebugUtils.LogError($"No scenes found in {config.name}");
-            return;
-        }
-        DebugUtils.Log($"Start building with configuration [{config}]... ");
-        SetBuildSettings(config);
-
-        string[] scenePaths = config.scenes
-            .Select(path => AssetDatabase.GetAssetPath(path))
-            .ToArray();
-        string buildPath = GetBuildPath(config) + GetExecutableExtension(config.buildTarget);
-
-        BuildPlayerOptions options = new BuildPlayerOptions
-        {
-            scenes = scenePaths,
-            locationPathName = buildPath,
-            target = config.buildTarget,
-        };
-
-        DebugUtils.Log($"Starting build for {config.name}...");
-        DebugUtils.Log($"Build target : {config.buildTarget}");
-        DebugUtils.Log($"Output path : {buildPath}");
-        DebugUtils.Log($"Scene count : {config.scenes.Count}");
-
-        BuildPipeline.BuildPlayer(options);
-    }
-
-    private static string GetBuildPath(BuildConfig config)
-    {
-        string targetFolderPath;
-
-        if (config.isServerBuild == true)
-            targetFolderPath = $"Build/Server/{config.buildTarget}";
-        else
-            targetFolderPath = $"Build/Client/{config.buildTarget}";
-
-        // Clean build (The target path already exists as a directory 오류 방지용)
-        if (Directory.Exists(targetFolderPath) == true)
-        {
-            Directory.Delete(targetFolderPath, true);
-        }
-
-        Directory.CreateDirectory(targetFolderPath);
-
-        return targetFolderPath;
-    }
-    private static string GetExecutableExtension(BuildTarget target)
-    {
-        switch (target)
-        {
-            case BuildTarget.StandaloneWindows:
-            case BuildTarget.StandaloneWindows64:
-                return ".exe";
-            case BuildTarget.StandaloneLinux64:
-                return ".x86_64";
-            default:
-                return "";
-        }
-    }
-
-    /// <summary>
-    /// BuildConfig에 따라 에디터 사이드에서 필요한 세팅을 수행합니다.
-    /// </summary>
-    /// <param name="config"></param>
-    private static void SetBuildSettings(BuildConfig config)
-    {
-        if (config.isServerBuild == true)
-        {
-            switch (config.buildTarget)
-            {
-                case BuildTarget.StandaloneLinux64:
                 case BuildTarget.StandaloneWindows:
                 case BuildTarget.StandaloneWindows64:
-                    EditorUserBuildSettings.standaloneBuildSubtarget = StandaloneBuildSubtarget.Server;
-                    DebugUtils.Log($"Setting build subtarget to Server for {config.buildTarget}");
-                    break;
+                    return ".exe";
+                case BuildTarget.StandaloneLinux64:
+                    return ".x86_64";
                 default:
-                    DebugUtils.LogError($"Server build is not supported for {config.buildTarget}. Building as regular player.");
-                    EditorUserBuildSettings.standaloneBuildSubtarget = StandaloneBuildSubtarget.Player;
-                    break;
+                    return "";
             }
         }
-        else
+
+        /// <summary>
+        /// BuildConfig에 따라 에디터 사이드에서 필요한 세팅을 수행합니다.
+        /// </summary>
+        /// <param name="config"></param>
+        private static void SetBuildSettings(BuildConfig config)
         {
-            EditorUserBuildSettings.standaloneBuildSubtarget = StandaloneBuildSubtarget.Player;
-            DebugUtils.Log($"Setting build subtarget to Player for {config.buildTarget}");
+            if (config.isServerBuild == true)
+            {
+                switch (config.buildTarget)
+                {
+                    case BuildTarget.StandaloneLinux64:
+                    case BuildTarget.StandaloneWindows:
+                    case BuildTarget.StandaloneWindows64:
+                        EditorUserBuildSettings.standaloneBuildSubtarget = StandaloneBuildSubtarget.Server;
+                        DebugUtils.Log($"Setting build subtarget to Server for {config.buildTarget}");
+                        break;
+                    default:
+                        DebugUtils.LogError($"Server build is not supported for {config.buildTarget}. Building as regular player.");
+                        EditorUserBuildSettings.standaloneBuildSubtarget = StandaloneBuildSubtarget.Player;
+                        break;
+                }
+            }
+            else
+            {
+                EditorUserBuildSettings.standaloneBuildSubtarget = StandaloneBuildSubtarget.Player;
+                DebugUtils.Log($"Setting build subtarget to Player for {config.buildTarget}");
+            }
         }
     }
 }
+#endif

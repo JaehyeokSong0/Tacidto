@@ -693,7 +693,7 @@ GameObject:
   - component: {fileID: 2868891538404124334}
   - component: {fileID: 6379298167496148746}
   - component: {fileID: 4670504881117638419}
-  - component: {fileID: 5643136946309004592}
+  - component: {fileID: 8227865317286674539}
   m_Layer: 5
   m_Name: Canvas_UI_TitleScene
   m_TagString: Untagged
@@ -786,18 +786,21 @@ MonoBehaviour:
   m_BlockingMask:
     serializedVersion: 2
     m_Bits: 4294967295
---- !u!225 &5643136946309004592
-CanvasGroup:
+--- !u!114 &8227865317286674539
+MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4025116716762927785}
   m_Enabled: 1
-  m_Alpha: 1
-  m_Interactable: 1
-  m_BlocksRaycasts: 1
-  m_IgnoreParentGroups: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b406b9ca9fb36034dbe785e460dbff94, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _startButton: {fileID: 4186076604329309080}
+  _settingsButton: {fileID: 1622807303265681029}
+  _exitButton: {fileID: 4308892536322159198}
 --- !u!1 &4076351611058695918
 GameObject:
   m_ObjectHideFlags: 0
